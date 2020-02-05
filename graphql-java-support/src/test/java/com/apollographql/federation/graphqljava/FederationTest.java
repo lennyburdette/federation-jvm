@@ -2,6 +2,7 @@ package com.apollographql.federation.graphqljava;
 
 import graphql.ExecutionResult;
 import graphql.schema.GraphQLFieldDefinition;
+import graphql.schema.GraphQLNamedSchemaElement;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import graphql.schema.GraphQLUnionType;
@@ -31,7 +32,24 @@ class FederationTest {
     void testEmpty() {
         final GraphQLSchema federated = Federation.transform(emptySDL)
                 .build();
-        Assertions.assertEquals("type Query {\n" +
+        Assertions.assertEquals("\"Directs the executor to include this field or fragment only when the `if` argument is true\"\n" +
+                "directive @include(\n" +
+                "    \"Included when true.\"\n" +
+                "    if: Boolean!\n" +
+                "  ) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT\n" +
+                "\n" +
+                "\"Directs the executor to skip this field or fragment when the `if`'argument is true.\"\n" +
+                "directive @skip(\n" +
+                "    \"Skipped when true.\"\n" +
+                "    if: Boolean!\n" +
+                "  ) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT\n" +
+                "\n" +
+                "\"Marks the field or enum value as deprecated\"\n" +
+                "directive @deprecated(\n" +
+                "    \"The reason for the deprecation\"\n" +
+                "    reason: String = \"No longer supported\"\n" +
+                "  ) on FIELD_DEFINITION | ENUM_VALUE\n\n" +
+                "type Query {\n" +
                 "  _service: _Service\n" +
                 "}\n" +
                 "\n" +
@@ -121,7 +139,7 @@ class FederationTest {
         final Iterable<String> unionTypes = entityType
                 .getTypes()
                 .stream()
-                .map(GraphQLType::getName)
+                .map(GraphQLNamedSchemaElement::getName)
                 .sorted()
                 .collect(Collectors.toList());
 

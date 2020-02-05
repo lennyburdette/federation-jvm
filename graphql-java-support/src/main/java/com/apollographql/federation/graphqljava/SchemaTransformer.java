@@ -7,6 +7,7 @@ import graphql.schema.DataFetcherFactory;
 import graphql.schema.FieldCoordinates;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLDirectiveContainer;
+import graphql.schema.GraphQLNamedSchemaElement;
 import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
@@ -15,7 +16,9 @@ import graphql.schema.idl.SchemaPrinter;
 import graphql.schema.idl.errors.SchemaProblem;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -85,7 +88,7 @@ public final class SchemaTransformer {
         final Set<String> entityTypeNames = originalSchema.getAllTypesAsList().stream()
                 .filter(t -> t instanceof GraphQLDirectiveContainer &&
                         ((GraphQLDirectiveContainer) t).getDirective(FederationDirectives.keyName) != null)
-                .map(GraphQLType::getName)
+                .map(GraphQLNamedSchemaElement::getName)
                 .collect(Collectors.toSet());
 
         final Set<String> entityConcreteTypeNames = originalSchema.getAllTypesAsList()
@@ -95,7 +98,7 @@ public final class SchemaTransformer {
                         ((GraphQLObjectType) type).getInterfaces()
                                 .stream()
                                 .anyMatch(itf -> entityTypeNames.contains(itf.getName())))
-                .map(GraphQLType::getName)
+                .map(GraphQLNamedSchemaElement::getName)
                 .collect(Collectors.toSet());
 
         if (!entityConcreteTypeNames.isEmpty()) {
@@ -134,12 +137,20 @@ public final class SchemaTransformer {
                 .build();
     }
 
+    private static final Set<String> ignoredDefaultDirectives = new HashSet<>();
+
+    static {
+        ignoredDefaultDirectives.add("deprecated");
+        ignoredDefaultDirectives.add("include");
+        ignoredDefaultDirectives.add("skip");
+    }
+
     private String sdl() {
         final SchemaPrinter.Options options = SchemaPrinter.Options.defaultOptions()
                 .includeScalarTypes(true)
                 .includeExtendedScalarTypes(true)
-                .includeSchemaDefintion(true)
-                .includeDirectives(true);
+                .includeSchemaDefinition(true)
+                .includeDirectives(graphQLDirective -> !ignoredDefaultDirectives.contains(graphQLDirective.getName()));
         return new SchemaPrinter(options).print(originalSchema);
     }
 }
